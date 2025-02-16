@@ -1,6 +1,6 @@
 package entity
 
-class Usuario (
+data class Usuario (
     val nombre: String,
     val email: String,
     val contraseña: String) {
@@ -18,7 +18,7 @@ class Usuario (
        require(email.isNotBlank()) { "El email no puede estar vacío." }
        require(email.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"))) { "El email no tiene un formato válido." }
        require(contraseña.isNotBlank()) { "La contraseña no puede estar vacía. Por favor, ingrese una contraseña segura." }
-       require(contraseña.length >= 8) { "La contraseña debe tener al menos 8 caracteres." }
+       require(contraseña.length >= 6) { "La contraseña debe tener al menos 6 caracteres." }
        require(contraseña.any { it.isDigit() }) { "La contraseña debe contener al menos un número." }
        require(contraseña.any { it.isUpperCase() }) { "La contraseña debe contener al menos una letra mayúscula." }
    }
