@@ -1,5 +1,5 @@
 package entity
 
-enum class Estado {
+enum class EstadoSolicitud {
     PENDIENTE, ACEPTADA, RECHAZADA, FINALIZADA
 }

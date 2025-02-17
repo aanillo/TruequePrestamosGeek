@@ -1,7 +1,7 @@
 import entity.*
 
 fun main() {
-
+/*
     var salir : Boolean = false
 
     do {
@@ -103,10 +103,12 @@ fun crearSolicitud() {
         else -> throw IllegalArgumentException("Debe ingresar 1 para Trueque o 2 para Préstamo.")
     }
 
-    val solicitud = Solicitud(tipo, null, null);
+    val solicitud = Solicitud(id, tipo, null, null);
 
     println("Solicitud de $tipo creada correctamente con ID: ${solicitud.id}")
+ */
 }
+
 
 
 

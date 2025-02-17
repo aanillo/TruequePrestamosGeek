@@ -1,5 +1,5 @@
 package entity
 
 enum class TipoSolicitud {
-    TRUEQUE, PRESTAMO
+    TRUEQUE, PRESTAMO, PENDIENTE
 }
