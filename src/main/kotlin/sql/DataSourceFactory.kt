@@ -1,5 +1,8 @@
 package sql
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import org.h2.jdbcx.JdbcDataSource
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.SQLException
@@ -11,18 +14,18 @@ object DataSourceFactory {
         JDBC
     }
 
-    private const val URL = "jdbc:h2:./default"
-    private const val USUARIO = "user"
-    private const val CONTRASEÑA = "user"
+    private const val URL = "jdbc:h2:~/test"
+    private const val USUARIO = "sa"
+    private const val CONTRASEÑA = ""
 
-    fun getDS(dataSourceType: DataSourceFactory.DataSourceType): DataSource {
+    fun getDS(dataSourceType: DataSourceFactory.DataSourceType): DataSource? {
         try {
             when (dataSourceType) {
                 DataSourceFactory.DataSourceType.HIKARI -> {
                     val config = HikariConfig()
-                    config.jdbcUrl = "jdbc:h2:./default"
-                    config.username = "user"
-                    config.password = "user"
+                    config.jdbcUrl = "jdbc:h2:tcp://localhost/~/test"
+                    config.username = "sa"
+                    config.password = ""
                     config.driverClassName = "org.h2.Driver"
                     config.maximumPoolSize = 10
                     config.isAutoCommit = true
@@ -31,9 +34,9 @@ object DataSourceFactory {
                 }
 
                 DataSourceFactory.DataSourceType.JDBC -> {
-                    val jdbcUrl = "jdbc:h2:./default"
-                    val username = "user"
-                    val password = "user"
+                    val jdbcUrl = "jdbc:h2:tcp://localhost/~/test"
+                    val username = "sa"
+                    val password = ""
                     val dataSource = JdbcDataSource()
                     dataSource.setURL(jdbcUrl)
                     dataSource.user = username

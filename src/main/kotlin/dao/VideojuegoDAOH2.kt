@@ -18,7 +18,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                 conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
                     stmt.setString(1, videojuego.titulo)
                     stmt.setString(2, videojuego.descripcion)
-                    stmt.setString(3, videojuego.propietario?.nombre)
+                    stmt.setInt(3, videojuego.propietario_id)
                     stmt.setString(4, videojuego.estado.name)
                     stmt.setString(5, videojuego.plataforma.name)
 
@@ -44,7 +44,12 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
     }
 
     override fun getAllByTitle(titulo: String): List<Videojuego> {
-        val sql = "SELECT * FROM videojuego WHERE titulo = ?"
+        val sql = """
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
+        FROM videojuego v
+        JOIN usuario u ON v.propietario = u.id
+        WHERE v.titulo = ?
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -53,18 +58,17 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                     stmt.executeQuery().use { rs ->
                         val videojuegos = mutableListOf<Videojuego>()
                         while (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+
                             videojuegos.add(
                                 Videojuego(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
-                                    estado = EstadoProducto.valueOf("estado"),
-                                    plataforma = Plataforma.valueOf(rs.getString("plataforma"))
+                                    propietario_id = -1,
+                                    estado = EstadoProducto.valueOf(rs.getString("estado")),
+                                    plataforma = Plataforma.valueOf(rs.getString("plataforma")),
+                                    propietario_nombre = propietarioNombre
                                 )
                             )
                         }
@@ -73,13 +77,18 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los usuarios: ${e.message}")
+            println("Error al obtener los videojuegos: ${e.message}")
             emptyList()
         }
     }
 
     override fun getAllByDesciption(descripcion: String): List<Videojuego> {
-        val sql = "SELECT * FROM videojuego WHERE descripcion = ?"
+        val sql = """
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
+        FROM videojuego v
+        JOIN usuario u ON v.propietario = u.id
+        WHERE v.descripcion = ?
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -88,18 +97,17 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                     stmt.executeQuery().use { rs ->
                         val videojuegos = mutableListOf<Videojuego>()
                         while (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+
                             videojuegos.add(
                                 Videojuego(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
-                                    estado = EstadoProducto.valueOf("estado"),
-                                    plataforma = Plataforma.valueOf(rs.getString("plataforma"))
+                                    propietario_id = -1,
+                                    estado = EstadoProducto.valueOf(rs.getString("estado")),
+                                    plataforma = Plataforma.valueOf(rs.getString("plataforma")),
+                                    propietario_nombre = propietarioNombre
                                 )
                             )
                         }
@@ -108,36 +116,34 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los usuarios: ${e.message}")
+            println("Error al obtener los videojuegos: ${e.message}")
             emptyList()
         }
     }
 
-    override fun getAllByOwner(propietario: String): List<Videojuego> {
+    override fun getAllByOwner(propietario_id: Int): List<Videojuego> {
         val sql = """
-        SELECT v.*, u.nombre AS propietario_nombre
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.id AS propietario_id
         FROM videojuego v
-        JOIN usuario u ON v.propietario_id = u.id
-        WHERE u.nombre = ?
+        JOIN usuario u ON v.propietario = u.id
+        WHERE v.propietario_id = ?
     """
 
         return try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, propietario)
+                    stmt.setInt(1, propietario_id)
                     stmt.executeQuery().use { rs ->
                         val videojuegos = mutableListOf<Videojuego>()
                         while (rs.next()) {
+                            val propietarioId = rs.getInt("propietario_id")
+
                             videojuegos.add(
                                 Videojuego(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario_nombre"),
-                                        email = "",
-                                        password = ""
-                                    ),
+                                    propietario_id = propietarioId,
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
                                     plataforma = Plataforma.valueOf(rs.getString("plataforma"))
                                 )
@@ -154,7 +160,12 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
     }
 
     override fun getAllByState(estado: String): List<Videojuego> {
-        val sql = "SELECT * FROM videojuego WHERE estado = ?"
+        val sql = """
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
+        FROM videojuego v
+        JOIN usuario u ON v.propietario = u.id
+        WHERE v.estado = ?
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -163,18 +174,17 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                     stmt.executeQuery().use { rs ->
                         val videojuegos = mutableListOf<Videojuego>()
                         while (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+
                             videojuegos.add(
                                 Videojuego(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
+                                    propietario_id = -1,
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
-                                    plataforma = Plataforma.valueOf(rs.getString("plataforma"))
+                                    plataforma = Plataforma.valueOf(rs.getString("plataforma")),
+                                    propietario_nombre = propietarioNombre
                                 )
                             )
                         }
@@ -202,11 +212,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
+                                    propietario_id = rs.getInt("propietario_id"),
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
                                     plataforma = Plataforma.valueOf(rs.getString("plataforma"))
                                 )
@@ -217,7 +223,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los usuarios: ${e.message}")
+            println("Error al obtener los videojuegos: ${e.message}")
             emptyList()
         }
     }

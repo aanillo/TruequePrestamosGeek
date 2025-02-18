@@ -1,11 +1,21 @@
 package services
 
+import dao.UsuarioDAOH2
 import entity.Usuario
 
-interface UsuarioService {
-    fun create(usuario: Usuario): Usuario?
-    fun getById(id: Int): Usuario?
-    fun update(usuario: Usuario): Usuario
-    fun delete(id: Int)
-    fun getAll(): List<Usuario>
+class UsuarioService(private val usuarioDAO: UsuarioDAOH2): UsuarioServiceImp {
+
+    override fun create(usuario: Usuario): Usuario? {
+        return usuarioDAO.create(usuario)
+    }
+
+
+    override fun login(username: String, password: String): Usuario? {
+        return usuarioDAO.login(username, password)
+    }
+
+    override fun getAll(): List<Usuario> {
+        return usuarioDAO.getAll()
+    }
+
 }

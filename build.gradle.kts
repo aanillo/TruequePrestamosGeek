@@ -19,6 +19,9 @@ dependencies {
     // Usar la versión correcta de Compose para Desktop
     implementation("org.jetbrains.compose.runtime:runtime:1.5.10")
     implementation("org.jetbrains.compose.material:material:1.5.10")
+    implementation("com.zaxxer:HikariCP:5.0.1")
+    implementation("com.h2database:h2:2.1.210")
+    implementation("org.mindrot:jbcrypt:0.4")
 }
 
 compose.desktop {

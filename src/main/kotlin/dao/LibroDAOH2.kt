@@ -1,6 +1,9 @@
 package dao
 
-import entity.*
+import entity.EstadoProducto
+import entity.Libro
+import entity.Plataforma
+import entity.Videojuego
 import java.sql.SQLException
 import java.sql.Statement
 import javax.sql.DataSource
@@ -8,14 +11,14 @@ import javax.sql.DataSource
 class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
 
     override fun create(libro: Libro): Libro? {
-        val sql = "INSERT INTO libro (titulo, descripcion, propietario, estado, autor) VALUES (?, ?, ?, ?, ?)"
+        val sql = "INSERT INTO libro (titulo, descripcion, propietario_id, estado, autor) VALUES (?, ?, ?, ?, ?)"
 
         return try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
                     stmt.setString(1, libro.titulo)
                     stmt.setString(2, libro.descripcion)
-                    stmt.setString(3, libro.propietario?.nombre)
+                    stmt.setInt(3, libro.propietario_id)
                     stmt.setString(4, libro.estado.name)
                     stmt.setString(5, libro.autor)
 
@@ -29,19 +32,24 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                         }
                         return libro
                     } else {
-                        println("Error al insertar el videojuego.")
+                        println("Error al insertar el libro.")
                         null
                     }
                 }
             }
         } catch (e: SQLException) {
-            println("Error al insertar videojuego: ${e.message}")
+            println("Error al insertar libro: ${e.message}")
             null
         }
     }
 
     override fun getAllByTitle(titulo: String): List<Libro> {
-        val sql = "SELECT * FROM libro WHERE titulo = ?"
+        val sql = """
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario
+        FROM libro l
+        JOIN usuario u ON l.propietario_id = u.id
+        WHERE l.titulo = ?
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -50,18 +58,17 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                     stmt.executeQuery().use { rs ->
                         val libros = mutableListOf<Libro>()
                         while (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+
                             libros.add(
                                 Libro(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
-                                    estado = EstadoProducto.valueOf("estado"),
-                                    autor = rs.getString("autor")
+                                    propietario_id = -1,
+                                    estado = EstadoProducto.valueOf(rs.getString("estado")),
+                                    autor = rs.getString("autor"),
+                                    propietario_nombre = propietarioNombre
                                 )
                             )
                         }
@@ -70,13 +77,18 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los usuarios: ${e.message}")
+            println("Error al obtener los libros: ${e.message}")
             emptyList()
         }
     }
 
     override fun getAllByDesciption(descripcion: String): List<Libro> {
-        val sql = "SELECT * FROM libro WHERE descripcion = ?"
+        val sql = """
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario
+        FROM libro l
+        JOIN usuario u ON l.propietario = u.id
+        WHERE l.descripcion = ?
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -85,18 +97,17 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                     stmt.executeQuery().use { rs ->
                         val libros = mutableListOf<Libro>()
                         while (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+
                             libros.add(
                                 Libro(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
-                                    estado = EstadoProducto.valueOf("estado"),
-                                    autor = rs.getString("autor")
+                                    propietario_id = -1,
+                                    estado = EstadoProducto.valueOf(rs.getString("estado")),
+                                    autor = rs.getString("autor"),
+                                    propietario_nombre = propietarioNombre
                                 )
                             )
                         }
@@ -105,36 +116,34 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los usuarios: ${e.message}")
+            println("Error al obtener los libros: ${e.message}")
             emptyList()
         }
     }
 
-    override fun getAllByOwner(propietario: String): List<Libro> {
+    override fun getAllByOwner(propietario_id: Int): List<Libro> {
         val sql = """
-        SELECT l.*, u.nombre AS propietario_nombre
-        FROM libro v
-        JOIN usuario u ON v.propietario_id = u.id
-        WHERE u.nombre = ?
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario_id
+        FROM libro l
+        JOIN usuario u ON l.propietario = u.id
+        WHERE l.propietario_id = ?
     """
 
         return try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, propietario)
+                    stmt.setInt(1, propietario_id)
                     stmt.executeQuery().use { rs ->
                         val libros = mutableListOf<Libro>()
                         while (rs.next()) {
+                            val propietarioId = rs.getInt("propietario_id")
+
                             libros.add(
                                 Libro(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario_nombre"),
-                                        email = "",
-                                        password = ""
-                                    ),
+                                    propietario_id = propietarioId,
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
                                     autor = rs.getString("autor")
                                 )
@@ -145,13 +154,18 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los videojuegos: ${e.message}")
+            println("Error al obtener los libros: ${e.message}")
             emptyList()
         }
     }
 
     override fun getAllByState(estado: String): List<Libro> {
-        val sql = "SELECT * FROM libro WHERE estado = ?"
+        val sql = """
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario
+        FROM libro l
+        JOIN usuario u ON l.propietario = u.id
+        WHERE l.estado = ?
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -160,18 +174,17 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                     stmt.executeQuery().use { rs ->
                         val libros = mutableListOf<Libro>()
                         while (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+
                             libros.add(
                                 Libro(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
+                                    propietario_id = -1,
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
-                                    autor = rs.getString("resultado")
+                                    autor = rs.getString("autor"),
+                                    propietario_nombre = propietarioNombre
                                 )
                             )
                         }
@@ -180,7 +193,7 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los videojuegos: ${e.message}")
+            println("Error al obtener los libros: ${e.message}")
             emptyList()
         }
     }
@@ -199,11 +212,7 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario = Usuario(
-                                        nombre = rs.getString("propietario"),
-                                        email = "",
-                                        password = ""
-                                    ),
+                                    propietario_id = rs.getInt("propietario_id"),
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
                                     autor = rs.getString("autor")
                                 )
@@ -214,7 +223,7 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                 }
             }
         } catch (e: SQLException) {
-            println("Error al obtener los usuarios: ${e.message}")
+            println("Error al obtener los libros: ${e.message}")
             emptyList()
         }
     }

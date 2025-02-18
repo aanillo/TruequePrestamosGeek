@@ -1,6 +1,7 @@
 package dao
 
 import entity.Usuario
+import org.mindrot.jbcrypt.BCrypt
 import java.sql.SQLException
 import java.sql.Statement
 import javax.sql.DataSource
@@ -13,9 +14,10 @@ class UsuarioDAOH2(private val dataSource: DataSource): UsuarioDAO {
         return try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
+                    val hashedPassword = BCrypt.hashpw(usuario.password, BCrypt.gensalt())
                     stmt.setString(1, usuario.nombre)
                     stmt.setString(2, usuario.email)
-                    stmt.setString(3, usuario.password)
+                    stmt.setString(3, hashedPassword)
 
                     val filaAfectada = stmt.executeUpdate()
 
@@ -67,35 +69,8 @@ class UsuarioDAOH2(private val dataSource: DataSource): UsuarioDAO {
     }
 
 
-    override fun getById(id: Int): Usuario? {
-        val sql = "SELECT * FROM usuario WHERE id = ?"
-
-        return try {
-            dataSource.connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, id)
-                    stmt.executeQuery().use { rs ->
-                        if (rs.next()) {
-                            Usuario(
-                                id = rs.getInt("id"),
-                                nombre = rs.getString("name"),
-                                email = rs.getString("email"),
-                                password = rs.getString("password")
-                            )
-                        } else {
-                            null
-                        }
-                    }
-                }
-            }
-        } catch (e: SQLException) {
-            println("Error al obtener el usuario: ${e.message}")
-            null
-        }
-    }
-
     override fun login(nombre: String, password: String): Usuario? {
-        val sql = "SELECT * FROM usuario WHERE email = ? AND password = ?"
+        val sql = "SELECT * FROM usuario WHERE nombre = ? AND password = ?"
 
         return try {
             dataSource.connection.use { conn ->
@@ -106,7 +81,7 @@ class UsuarioDAOH2(private val dataSource: DataSource): UsuarioDAO {
                         if (rs.next()) {
                             Usuario(
                                 id = rs.getInt("id"),
-                                nombre = rs.getString("name"),
+                                nombre = rs.getString("nombre"),
                                 email = rs.getString("email"),
                                 password = rs.getString("password")
                             )

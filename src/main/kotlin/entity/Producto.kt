@@ -4,7 +4,7 @@ abstract class Producto(
     var id: Int? = null,
     val titulo: String,
     val descripcion: String,
-    val propietario: Usuario?,
+    val propietario_id: Int,
     val estado: EstadoProducto
 ) {
 

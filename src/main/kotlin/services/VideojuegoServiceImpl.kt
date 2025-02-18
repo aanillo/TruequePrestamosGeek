@@ -1,9 +1,8 @@
-package dao
+package services
 
-import entity.Usuario
 import entity.Videojuego
 
-interface VideojuegoDAO {
+interface VideojuegoServiceImpl {
     fun create(videojuego: Videojuego) : Videojuego?
     fun getAllByTitle(titulo: String) : List<Videojuego>
     fun getAllByDesciption(descripcion: String) : List<Videojuego>
