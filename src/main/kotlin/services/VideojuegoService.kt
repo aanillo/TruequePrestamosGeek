@@ -17,16 +17,20 @@ class VideojuegoService(private val videojuegoDAO: VideojuegoDAOH2): VideojuegoS
         return videojuegoDAO.getAllByDesciption(descripcion)
     }
 
-    override fun getAllByOwner(propietario_id: Int): List<Videojuego> {
-        TODO("Not yet implemented")
+    override fun getAllByOwner(propietarioNombre: String): List<Videojuego> {
+        return videojuegoDAO.getAllByOwner(propietarioNombre)
     }
 
     override fun getAllByState(estado: String): List<Videojuego> {
-        TODO("Not yet implemented")
+        return videojuegoDAO.getAllByState(estado)
     }
 
     override fun getAll(): List<Videojuego> {
-        TODO("Not yet implemented")
+        return videojuegoDAO.getAll()
+    }
+
+    override fun getById(id: Int): Videojuego? {
+        return videojuegoDAO.getById(id)
     }
 
 }

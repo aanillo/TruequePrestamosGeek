@@ -1,11 +1,18 @@
+import com.google.gson.Gson
 import dao.LibroDAOH2
+import dao.SolicitudDAOH2
 import dao.UsuarioDAOH2
 import dao.VideojuegoDAOH2
 import entity.*
 import services.LibroService
+import services.SolicitudService
 import services.UsuarioService
 import services.VideojuegoService
 import sql.DataSourceFactory
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileWriter
+import java.io.IOException
 
 
 private val dataSource = DataSourceFactory.getDS(DataSourceFactory.DataSourceType.HIKARI)
@@ -15,23 +22,28 @@ private val videojuegoDAO = dataSource?.let { VideojuegoDAOH2(it) }
 private val videojuegoSevice = videojuegoDAO?.let { VideojuegoService(it) }
 private val libroDAO = dataSource?.let { LibroDAOH2(it) }
 private val libroSevice = libroDAO?.let { LibroService(it) }
+private val solicitudDAO = dataSource?.let { SolicitudDAOH2(it) }
+private val solicitudService = solicitudDAO?.let { SolicitudService(it) }
 
 
 fun main() {
     var usuarioLogueado: Usuario? = null
 
     println("Introduce nombre de usuario:")
-    val usernameAdmin = readln()
+    val usernameLogin = readln()
     println("Introduce contraseña:")
-    val passwordAdmin = readln()
+    val passwordLogin = readln()
 
-    if(usernameAdmin.equals("admin") && passwordAdmin.equals("admin")) {
-        usuarioLogueado = usuarioService?.login(usernameAdmin, passwordAdmin)
+    val usuarios: List<Usuario>? = usuarioService?.getAll()
 
-        var salir : Boolean = false
+    usuarioLogueado = usuarios?.find { it.nombre == usernameLogin && it.password == passwordLogin }
 
+    if (usuarioLogueado != null) {
+        usuarioLogueado = usuarioService?.login(usernameLogin, passwordLogin)
+
+        var salir = false
         do {
-            println("\n===== USUARIO: ${ usuarioLogueado?.nombre } =====")
+            println("\n===== USUARIO: ${usuarioLogueado?.nombre} =====")
             println("1. Registrar nuevo usuario")
             println("2. Agregar producto")
             println("3. Listar productos")
@@ -47,20 +59,11 @@ fun main() {
 
             when (opcion) {
                 1 -> registrarUsuario()
-                2 -> {
-                    if (usuarioLogueado != null) {
-                        agregarProducto(usuarioLogueado)
-                    } else {
-                        println("Debe iniciar sesión primero.")
-                    }
-                }
-                3 -> {
-                    if (usuarioLogueado != null) {
-                        listarProducto(usuarioLogueado)
-                    } else {
-                        println("Debe iniciar sesión primero.")
-                    }
-                }
+                2 -> agregarProducto(usuarioLogueado)
+                3 -> listarProducto(usuarioLogueado)
+                4 -> crearSolicitud(usuarioLogueado)
+                5 -> filtrarSolicitud(usuarioLogueado)
+                6 -> actualizarSolicitud(usuarioLogueado)
                 0 -> {
                     println("Saliendo del programa...")
                     salir = true
@@ -71,8 +74,8 @@ fun main() {
     } else {
         println("Error. Por favor, introduce las credenciales correctas para acceder al programa.")
     }
-
 }
+
 
 fun registrarUsuario() {
     println("\n=== Registro de Usuario ===")
@@ -110,8 +113,8 @@ fun agregarProducto(usuarioLogueado: Usuario?) {
             val plataformaString = readlnOrNull()?.uppercase() ?: ""
             try {
                 val plataforma = Plataforma.valueOf(plataformaString)
-                val propietarioId = usuarioLogueado?.id
-                val videojuego = propietarioId?.let { Videojuego(titulo = titulo, descripcion = descripcion, propietario_id = it, plataforma = plataforma) }
+                val propietario = usuarioLogueado?.id
+                val videojuego = propietario?.let { Videojuego(titulo = titulo, descripcion = descripcion, propietario_id = it, plataforma = plataforma) }
                 val videojuegoNuevo = videojuego?.let { videojuegoSevice?.create(it) }
                 println("${videojuegoNuevo?.titulo} agregado correctamente")
             } catch (e: IllegalArgumentException) {
@@ -156,8 +159,23 @@ fun listarProducto(usuarioLogueado: Usuario?) {
                     val descripcion = readln().trim()
                     filtrarDescripcion(descripcion)
                 }
+                3 -> {
+                    println("Introduce la id del usuario:")
+                    val usuario = readln().trim()
+                    filtrarUsuario(usuario)
+                }
+                4 -> {
+                    println("Introduce el estado:")
+                    val estado = readln().trim().uppercase()
+                    filtrarEstado(estado)
+                }
+                else -> println("Error. Por favor, introduce una opción correcta.")
             }
         }
+        "N" -> {
+            listarSinFiltro()
+        }
+        else -> println("Error. Por favor, introduce una opción correcta.")
     }
 }
 
@@ -200,30 +218,425 @@ fun filtrarDescripcion(descripcion: String) {
         }
     }
 }
-/*
-fun crearSolicitud() {
+
+fun filtrarUsuario(nombre: String) {
+    val productos: MutableList<Producto> = mutableListOf()
+    val videojuegos: List<Videojuego>? = videojuegoDAO?.getAllByOwner(nombre)
+    val libros: List<Libro>? = libroDAO?.getAllByOwner(nombre)
+
+    if (videojuegos != null) {
+        productos.addAll(videojuegos)
+    }
+    if (libros != null) {
+        productos.addAll(libros)
+    }
+    if (productos.isEmpty()) {
+        println("No se encontraron productos para el usuario '$nombre'.")
+    } else {
+        for (producto in productos) {
+            println(producto.mostrarDetalles())
+        }
+    }
+}
+
+fun filtrarEstado(estado: String) {
+    val productos: MutableList<Producto> = mutableListOf()
+    val videojuegos: List<Videojuego>? = videojuegoDAO?.getAllByState(estado)
+    val libros: List<Libro>? = libroDAO?.getAllByState(estado)
+
+    if (videojuegos != null) {
+        productos.addAll(videojuegos)
+    }
+    if (libros != null) {
+        productos.addAll(libros)
+    }
+    if (productos.isEmpty()) {
+        println("No se encontraron productos con el estado '$estado'.")
+    } else {
+        for (producto in productos) {
+            println(producto.mostrarDetalles())
+        }
+    }
+}
+
+fun listarSinFiltro() {
+    val productos: MutableList<Producto> = mutableListOf()
+    val videojuegos: List<Videojuego>? = videojuegoDAO?.getAll()
+    val libros: List<Libro>? = libroDAO?.getAll()
+
+    if (videojuegos != null) {
+        productos.addAll(videojuegos)
+    }
+    if (libros != null) {
+        productos.addAll(libros)
+    }
+    if (productos.isEmpty()) {
+        println("No se encontraron productos.")
+    } else {
+        for (producto in productos) {
+            println(producto.mostrarDetalles())
+        }
+    }
+}
+
+fun crearSolicitud(usuarioLogueado: Usuario?) {
     println("\n=== Crear Solicitud ===")
     println("Ingrese el ID del producto:")
-    val id = readLine()?.toIntOrNull()
+    val idProducto = readlnOrNull()?.toIntOrNull()
+
+    if (idProducto == null) {
+        println("Error: El ID del producto debe ser un número válido.")
+        return
+    }
+
+    println("Ingrese el tipo (VIDEOJUEGO o LIBRO):")
+    val tipoProducto = readln().trim().uppercase()
+
+    if (tipoProducto != "VIDEOJUEGO" && tipoProducto != "LIBRO") {
+        println("Error: El tipo de producto debe ser VIDEOJUEGO o LIBRO.")
+        return
+    }
 
     println("Tipo de solicitud (1 - Trueque, 2 - Préstamo):")
     val opcion = readLine()?.toInt()
-    val tipo = when(opcion) {
-        1 -> {
-            TipoSolicitud.TRUEQUE
+
+    val idUsuario = usuarioLogueado?.id
+
+    val tipoSolicitud = when (opcion) {
+        1 -> TipoSolicitud.TRUEQUE
+        2 -> TipoSolicitud.PRESTAMO
+        else -> {
+            println("Error: Debe ingresar 1 para Trueque o 2 para Préstamo.")
+            return
         }
-        2 -> {
-            TipoSolicitud.PRESTAMO
-        }
-        else -> throw IllegalArgumentException("Debe ingresar 1 para Trueque o 2 para Préstamo.")
     }
 
-    val solicitud = Solicitud(id, tipo, null, null);
+    val solicitud = idUsuario?.let {
+        Solicitud(
+            tipoSolicitud = tipoSolicitud,
+            solicitante_id = it,
+            producto_id = idProducto,
+            estado = EstadoSolicitud.PENDIENTE
+    )
+    }
 
-    println("Solicitud de $tipo creada correctamente con ID: ${solicitud.id}")
- */
+    val solicitudCreada = solicitud?.let { solicitudService?.create(it, idProducto, tipoProducto) }
+
+    if (solicitudCreada != null) {
+        val nombreProducto = when (tipoProducto) {
+            "VIDEOJUEGO" -> videojuegoSevice?.getById(idProducto)
+            "LIBRO" -> libroSevice?.getById(idProducto)
+            else -> null
+        }?.titulo
+
+        if (nombreProducto != null) {
+            println("Solicitud de ${solicitudCreada.tipoSolicitud} creada correctamente con el producto: $nombreProducto.")
+        } else {
+            println("Error: No se pudo obtener el nombre del producto.")
+        }
+    } else {
+        println("Hubo un error al crear la solicitud.")
+    }
+
+}
+
+fun filtrarSolicitud(usuarioLogueado: Usuario?) {
+    println("\n=== Listado de solicitudes ===")
+    val idUsuario = usuarioLogueado?.id ?: run {
+        println("Error: Usuario no identificado.")
+        return
+    }
+
+    println("¿Deseas ver solicitudes activas o histórico? (A/H)")
+    val estadoFiltro = when (readLine()?.trim()?.uppercase()) {
+        "A" -> EstadoSolicitud.PENDIENTE.name
+        "H" -> null
+        else -> {
+            println("Error: Por favor, responda 'A' para solicitudes activas o 'H' para histórico.")
+            return
+        }
+    }
+
+    println("¿Desea listar sus solicitudes o las realizadas a sus productos? \n1. Mis solicitudes / 2. Solicitudes a mis productos")
+    val rolFiltro = readln().toIntOrNull()
+    if (rolFiltro !in listOf(1, 2)) {
+        println("Error: Opción no reconocida. Ingrese '1' para ver sus solicitudes o '2' para ver las solicitudes a sus productos.")
+        return
+    }
+
+    val solicitudes = when (rolFiltro) {
+        1 -> solicitudService?.getSolicitudesPorUsuario(idUsuario, estadoFiltro)
+        2 -> solicitudService?.getSolicitudesAProductosDeUsuario(idUsuario, estadoFiltro)
+        else -> null
+    }
+
+    if (solicitudes.isNullOrEmpty()) {
+        println("No se encontraron solicitudes para los criterios seleccionados.")
+    } else {
+        println("Producto | Estado | Tipo de Solicitud | ${if (rolFiltro == 1) "Propietario" else "Solicitante"}")
+        println("-".repeat(50))
+        solicitudes.forEach { solicitud ->
+            println("${solicitud.producto_nombre} | ${solicitud.estado} | ${solicitud.tipoSolicitud} | ${solicitud.solicitante_nombre}")
+        }
+    }
+}
 
 
+fun actualizarSolicitud(usuarioLogueado: Usuario?) {
+    println("\n=== Actualizar estado de solicitud ===")
+    println("Introduzca el ID de la solicitud:")
+    val id = readln().trim().toIntOrNull()
+
+    if (id == null) {
+        println("Error: El ID ingresado no es válido. Debe ser un número.")
+        return
+    }
+
+    val solicitud = solicitudService?.getById(id)
+
+    if (solicitud == null) {
+        println("Error: No se encontró una solicitud con el ID ingresado.")
+        return
+    }
+
+    println("Ingrese el nuevo estado: \n1. ACEPTADA \n2. RECHAZADA \n3. FINALIZADA")
+    val respuesta = readln().trim().uppercase()
+
+    if (solicitud.estado == EstadoSolicitud.PENDIENTE) {
+        val estadoNuevo = when (respuesta) {
+            "ACEPTADA" -> EstadoSolicitud.ACEPTADA
+            "RECHAZADA" -> EstadoSolicitud.RECHAZADA
+            else -> {
+                println("Error. El estado debe ser ACEPTADA, RECHAZADA o FINALIZADA")
+                return
+            }
+        }
+
+        val solicitudNueva = solicitudService.updateSolicitud(id, estadoNuevo.toString())
+
+        if (solicitudNueva != null) {
+            println("Solicitud ${solicitudNueva.id} actualizada a estado: ${solicitudNueva.estado}")
+        } else {
+            println("Error: No se pudo actualizar la solicitud.")
+        }
+    } else if (solicitud.estado == EstadoSolicitud.ACEPTADA) {
+        val estadoNuevo = when (respuesta) {
+            "FINALIZADA" -> EstadoSolicitud.ACEPTADA
+            else -> {
+                println("Error. El estado debe ser ACEPTADA, RECHAZADA o FINALIZADA")
+                return
+            }
+        }
+        val solicitudNueva = solicitudService.updateSolicitud(id, estadoNuevo.toString())
+
+        if (solicitudNueva != null) {
+            println("Solicitud ${solicitudNueva.id} actualizada a estado: ${solicitudNueva.estado}")
+        } else {
+            println("Error: No se pudo actualizar la solicitud.")
+        }
+    } else {
+        println("Error: Solo se pueden actualizar solicitudes en estado 'PENDIENTE'.")
+    }
+}
+
+fun cargarProductosDesdeTXT(ruta: String): Boolean {
+    val archivo = File(ruta)
 
 
+    if (!archivo.exists()) {
+        println("Error: El archivo no existe.")
+        return false
+    }
 
+
+    try {
+        archivo.bufferedReader().use { br ->
+            br.forEachLine { line ->
+
+                val campos = line.split(";")
+                if (campos.size == 5) {
+
+                    val id = campos[0].toIntOrNull()
+                    val titulo = campos[1]
+                    val descripcion = campos[2]
+                    val tipo = campos[3]
+                    val estado = campos[4]
+                    val atributoEspecifico = campos[5]
+
+                    val producto: Producto = when (tipo) {
+                        "Videojuego" -> Videojuego(
+                            id = id,
+                            titulo = titulo,
+                            descripcion = descripcion,
+                            propietario_id = 1,
+                            estado = EstadoProducto.valueOf(estado),
+                            plataforma = Plataforma.valueOf(atributoEspecifico)
+                        )
+                        "Libro" -> Libro(
+                            id = id,
+                            titulo = titulo,
+                            descripcion = descripcion,
+                            propietario_id = 1,
+                            estado = EstadoProducto.valueOf(estado),
+                            autor = atributoEspecifico
+                        )
+                        else -> {
+                            println("Error: Tipo de producto desconocido.")
+                            return@forEachLine
+                        }
+                    }
+
+
+                    producto.mostrarDetalles()
+                    println("Producto ${producto.titulo} cargado correctamente.")
+                } else {
+                    println("Error: Línea con formato incorrecto.")
+                }
+            }
+        }
+    } catch (e: FileNotFoundException) {
+        println("Error: El archivo no se puede leer.")
+        return false
+    }
+
+    return true
+}
+
+fun exportarProductosAArchivoTXT(nombreArchivo: String, productos: MutableList<Producto>): Boolean {
+    val archivo = File("ficheros/$nombreArchivo")
+
+    try {
+        FileWriter(archivo).use { writer ->
+            productos.forEach { producto ->
+
+                val tipo = when (producto) {
+                    is Videojuego -> "Videojuego"
+                    is Libro -> "Libro"
+                    else -> "Desconocido"
+                }
+
+
+                val atributoEspecifico = when (producto) {
+                    is Videojuego -> producto.plataforma.name
+                    is Libro -> producto.autor
+                    else -> "Desconocido"
+                }
+
+
+                val linea = "${producto.id};${producto.titulo};${producto.descripcion};$tipo;$atributoEspecifico;${producto.estado}\n"
+                writer.write(linea)
+            }
+        }
+        println("Productos exportados exitosamente a $nombreArchivo.")
+    } catch (e: IOException) {
+        println("Error: No se pudo generar el archivo.")
+        return false
+    }
+
+    return true
+}
+
+
+fun exportarProductosAArchivoJSON(nombreArchivo: String, productos: List<Producto>): Boolean {
+    val archivo = File("ficheros/$nombreArchivo")
+
+    try {
+        val productosJson = productos.map { producto ->
+
+            val tipo = when (producto) {
+                is Videojuego -> "Videojuego"
+                is Libro -> "Libro"
+                else -> "Desconocido"
+            }
+
+            val atributoEspecifico = when (producto) {
+                is Videojuego -> producto.plataforma.name
+                is Libro -> producto.autor
+                else -> "Desconocido"
+            }
+
+
+            mapOf(
+                "id" to producto.id,
+                "titulo" to producto.titulo,
+                "descripcion" to producto.descripcion,
+                "tipo" to tipo,
+                "atributo" to atributoEspecifico,
+                "estado" to producto.estado.toString()
+            )
+        }
+
+
+        val gson = Gson()
+        val json = gson.toJson(productosJson)
+        archivo.writeText(json)
+        println("Productos exportados exitosamente a $nombreArchivo.")
+    } catch (e: IOException) {
+        println("Error: No se pudo generar el archivo.")
+        return false
+    }
+
+    return true
+}
+
+
+fun cargarProductosDesdeJson(ruta: String): Boolean {
+    val archivo = File(ruta)
+
+
+    if (!archivo.exists()) {
+        println("Error: El archivo no existe.")
+        return false
+    }
+
+    try {
+        val gson = Gson()
+
+        val productosJson = gson.fromJson(archivo.reader(), List::class.java) as List<Map<String, Any>>
+
+
+        productosJson.forEach { productoMap ->
+            val tipo = productoMap["tipo"] as String
+            val id = (productoMap["id"] as Double).toInt()
+            val titulo = productoMap["titulo"] as String
+            val descripcion = productoMap["descripcion"] as String
+            val atributoEspecifico = productoMap["atributo"] as String
+            val estado = EstadoProducto.valueOf(productoMap["estado"] as String)
+
+            val producto: Producto = when (tipo) {
+                "Videojuego" -> Videojuego(
+                    id = id,
+                    titulo = titulo,
+                    descripcion = descripcion,
+                    propietario_id = 1,
+                    estado = estado,
+                    plataforma = Plataforma.valueOf(atributoEspecifico)
+                )
+                "Libro" -> Libro(
+                    id = id,
+                    titulo = titulo,
+                    descripcion = descripcion,
+                    propietario_id = 1,
+                    estado = estado,
+                    autor = atributoEspecifico
+                )
+                else -> {
+                    println("Error: Tipo de producto desconocido.")
+                    return@forEach
+                }
+            }
+
+
+            producto.mostrarDetalles()
+            println("Producto ${producto.titulo} cargado correctamente.")
+        }
+    } catch (e: IOException) {
+        println("Error: No se pudo leer el archivo JSON.")
+        return false
+    } catch (e: Exception) {
+        println("Error: Formato de archivo incorrecto.")
+        return false
+    }
+
+    return true
+}

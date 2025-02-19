@@ -1,7 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("jvm") version "1.9.0"  // Asegúrate de usar una versión reciente
+    kotlin("jvm") version "1.9.0"
     id("org.jetbrains.compose") version "1.5.10"
 }
 
@@ -22,6 +22,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:5.0.1")
     implementation("com.h2database:h2:2.1.210")
     implementation("org.mindrot:jbcrypt:0.4")
+    implementation("com.google.code.gson:gson:2.8.8")
 }
 
 compose.desktop {

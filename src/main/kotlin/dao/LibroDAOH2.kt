@@ -86,7 +86,7 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
         val sql = """
         SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario
         FROM libro l
-        JOIN usuario u ON l.propietario = u.id
+        JOIN usuario u ON l.propietario_id = u.id
         WHERE l.descripcion = ?
     """
 
@@ -121,31 +121,30 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
         }
     }
 
-    override fun getAllByOwner(propietario_id: Int): List<Libro> {
+    override fun getAllByOwner(propietarioNombre: String): List<Libro> {
         val sql = """
-        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario_id
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.nombre AS propietario
         FROM libro l
-        JOIN usuario u ON l.propietario = u.id
-        WHERE l.propietario_id = ?
+        JOIN usuario u ON l.propietario_id = u.id
+        WHERE u.nombre = ?
     """
 
         return try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, propietario_id)
+                    stmt.setString(1, propietarioNombre)
                     stmt.executeQuery().use { rs ->
                         val libros = mutableListOf<Libro>()
                         while (rs.next()) {
-                            val propietarioId = rs.getInt("propietario_id")
-
                             libros.add(
                                 Libro(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario_id = propietarioId,
+                                    propietario_id = -1,
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
-                                    autor = rs.getString("autor")
+                                    autor = rs.getString("autor"),
+                                    propietario_nombre = rs.getString("propietario")
                                 )
                             )
                         }
@@ -163,7 +162,7 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
         val sql = """
         SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario
         FROM libro l
-        JOIN usuario u ON l.propietario = u.id
+        JOIN usuario u ON l.propietario_id = u.id
         WHERE l.estado = ?
     """
 
@@ -225,6 +224,43 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
         } catch (e: SQLException) {
             println("Error al obtener los libros: ${e.message}")
             emptyList()
+        }
+    }
+
+    override fun getById(id: Int): Libro? {
+        val sql = """
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, u.id AS propietario
+        FROM libro l
+        JOIN usuario u ON l.propietario_id = u.id
+        WHERE l.id = ?
+    """
+
+        return try {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setInt(1, id)
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+                            return Libro(
+                                id = rs.getInt("id"),
+                                titulo = rs.getString("titulo"),
+                                descripcion = rs.getString("descripcion"),
+                                propietario_id = -1,  // Si es necesario, cambia esto para asignar el valor correcto
+                                estado = EstadoProducto.valueOf(rs.getString("estado")),
+                                autor = rs.getString("autor"),
+                                propietario_nombre = propietarioNombre
+                            )
+                        } else {
+                            // No se encontró el videojuego con el id proporcionado
+                            null
+                        }
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("Error al obtener el libro por ID: ${e.message}")
+            null
         }
     }
 }

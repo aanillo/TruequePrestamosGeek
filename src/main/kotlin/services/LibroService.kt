@@ -17,8 +17,8 @@ class LibroService(private val libroDAO: LibroDAO): LibroServiceImpl {
         return libroDAO.getAllByDesciption(descripcion)
     }
 
-    override fun getAllByOwner(propietario_id: Int): List<Libro> {
-        return libroDAO.getAllByOwner(propietario_id)
+    override fun getAllByOwner(propietarioNombre: String): List<Libro> {
+        return libroDAO.getAllByOwner(propietarioNombre)
     }
 
     override fun getAllByState(estado: String): List<Libro> {
@@ -27,5 +27,9 @@ class LibroService(private val libroDAO: LibroDAO): LibroServiceImpl {
 
     override fun getAll(): List<Libro> {
         return libroDAO.getAll()
+    }
+
+    override fun getById(id: Int): Libro? {
+        return libroDAO.getById(id)
     }
 }

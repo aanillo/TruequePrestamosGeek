@@ -1,9 +1,6 @@
 package dao
 
-import entity.EstadoProducto
-import entity.Plataforma
-import entity.Usuario
-import entity.Videojuego
+import entity.*
 import java.sql.SQLException
 import java.sql.Statement
 import javax.sql.DataSource
@@ -11,7 +8,7 @@ import javax.sql.DataSource
 class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
 
     override fun create(videojuego: Videojuego): Videojuego? {
-        val sql = "INSERT INTO videojuego (titulo, descripcion, propietario, estado, plataforma) VALUES (?, ?, ?, ?, ?)"
+        val sql = "INSERT INTO videojuego (titulo, descripcion, propietario_id, estado, plataforma) VALUES (?, ?, ?, ?, ?)"
 
         return try {
             dataSource.connection.use { conn ->
@@ -47,7 +44,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
         val sql = """
         SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
         FROM videojuego v
-        JOIN usuario u ON v.propietario = u.id
+        JOIN usuario u ON v.propietario_id = u.id
         WHERE v.titulo = ?
     """
 
@@ -86,7 +83,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
         val sql = """
         SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
         FROM videojuego v
-        JOIN usuario u ON v.propietario = u.id
+        JOIN usuario u ON v.propietario_id = u.id
         WHERE v.descripcion = ?
     """
 
@@ -121,31 +118,30 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
         }
     }
 
-    override fun getAllByOwner(propietario_id: Int): List<Videojuego> {
+    override fun getAllByOwner(propietarioNombre: String): List<Videojuego> {
         val sql = """
-        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.id AS propietario_id
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
         FROM videojuego v
-        JOIN usuario u ON v.propietario = u.id
-        WHERE v.propietario_id = ?
+        JOIN usuario u ON v.propietario_id = u.id  
+        WHERE u.nombre = ?
     """
 
         return try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, propietario_id)
+                    stmt.setString(1, propietarioNombre)
                     stmt.executeQuery().use { rs ->
                         val videojuegos = mutableListOf<Videojuego>()
                         while (rs.next()) {
-                            val propietarioId = rs.getInt("propietario_id")
-
                             videojuegos.add(
                                 Videojuego(
                                     id = rs.getInt("id"),
                                     titulo = rs.getString("titulo"),
                                     descripcion = rs.getString("descripcion"),
-                                    propietario_id = propietarioId,
+                                    propietario_id = -1,
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
-                                    plataforma = Plataforma.valueOf(rs.getString("plataforma"))
+                                    plataforma = Plataforma.valueOf(rs.getString("plataforma")),
+                                    propietario_nombre = rs.getString("propietario"),
                                 )
                             )
                         }
@@ -163,7 +159,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
         val sql = """
         SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
         FROM videojuego v
-        JOIN usuario u ON v.propietario = u.id
+        JOIN usuario u ON v.propietario_id = u.id
         WHERE v.estado = ?
     """
 
@@ -229,4 +225,42 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
     }
 
 
+    override fun getById(id: Int): Videojuego? {
+        val sql = """
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, u.nombre AS propietario
+        FROM videojuego v
+        JOIN usuario u ON v.propietario_id = u.id
+        WHERE v.id = ?
+    """
+
+        return try {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setInt(1, id)
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            val propietarioNombre = rs.getString("propietario")
+                            return Videojuego(
+                                id = rs.getInt("id"),
+                                titulo = rs.getString("titulo"),
+                                descripcion = rs.getString("descripcion"),
+                                propietario_id = -1,  // Si es necesario, cambia esto para asignar el valor correcto
+                                estado = EstadoProducto.valueOf(rs.getString("estado")),
+                                plataforma = Plataforma.valueOf(rs.getString("plataforma")),
+                                propietario_nombre = propietarioNombre
+                            )
+                        } else {
+
+                            null
+                        }
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("Error al obtener el videojuego por ID: ${e.message}")
+            null
+        }
+    }
+
 }
+
