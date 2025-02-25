@@ -1,6 +1,6 @@
 package ui
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import entity.Libro
@@ -28,29 +29,28 @@ class Ui{
         val viewModel = remember { ProductoViewModel() }
         val productos = viewModel.productos
         val errorMensaje = viewModel.errorMessage
+        val lazyListState = rememberLazyListState()
 
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF9A0007))
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "BIENVENIDO/A a la APP",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF9A0007))
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "BIENVENIDO/A a la APP",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
-
 
             Box(
                 modifier = Modifier
@@ -68,7 +68,6 @@ class Ui{
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -91,20 +90,24 @@ class Ui{
 
             Spacer(modifier = Modifier.height(16.dp))
 
-
             if (errorMensaje.isNotEmpty()) {
                 Text("Error: $errorMensaje", color = Color.Red)
             }
 
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 16.dp)
-            ) {
-                items(productos) { producto ->
-                    ProductoItem(producto)
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(end = 12.dp),
+                    state = lazyListState // Usa LazyListState para manejar el scroll
+                ) {
+                    items(productos) { producto ->
+                        ProductoItem(producto)
+                    }
                 }
+
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(lazyListState)
+                )
             }
         }
     }

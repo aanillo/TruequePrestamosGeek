@@ -23,6 +23,7 @@ dependencies {
     implementation("com.h2database:h2:2.1.210")
     implementation("org.mindrot:jbcrypt:0.4")
     implementation("com.google.code.gson:gson:2.8.8")
+    implementation("at.favre.lib:bcrypt:0.9.0")
 }
 
 compose.desktop {

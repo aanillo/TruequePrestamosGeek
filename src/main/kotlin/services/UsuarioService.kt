@@ -18,4 +18,8 @@ class UsuarioService(private val usuarioDAO: UsuarioDAOH2): UsuarioServiceImp {
         return usuarioDAO.getAll()
     }
 
+    override fun getByUsername(nombre: String): Usuario? {
+        return usuarioDAO.getByUsername(nombre)
+    }
+
 }

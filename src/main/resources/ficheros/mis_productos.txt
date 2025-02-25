@@ -1,6 +1,7 @@
 1;Super Mario Odissey;Mario;Videojuego;NINTENDO;DISPONIBLE
 2;The last of us;Saga tlou;Videojuego;PLAYSTATION;DISPONIBLE
 33;COD Modern Warfare;Juego de la saga COD;Videojuego;PLAYSTATION;DISPONIBLE
+34;GTA 5;Videojuego popular;Videojuego;XBOX;DISPONIBLE
 1;Los pilares de la tierra;Novela;Libro;Kent Follet;DISPONIBLE
 33;El sabueso de los Baskerville;Novela;Libro;Arthur Conan;DISPONIBLE
 34;La madre de Frankestein;Libro basado en hechos reales;Libro;Almudena Grandes;DISPONIBLE

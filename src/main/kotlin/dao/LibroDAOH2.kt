@@ -198,7 +198,11 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
     }
 
     override fun getAll(): List<Libro> {
-        val sql = "SELECT * FROM libro"
+        val sql = """
+        SELECT l.id, l.titulo, l.descripcion, l.estado, l.autor, l.propietario_id, u.nombre AS propietario_nombre
+        FROM libro l
+        JOIN usuario u ON l.propietario_id = u.id
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -213,7 +217,8 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                                     descripcion = rs.getString("descripcion"),
                                     propietario_id = rs.getInt("propietario_id"),
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
-                                    autor = rs.getString("autor")
+                                    autor = rs.getString("autor"),
+                                    propietario_nombre = rs.getString("propietario_nombre")
                                 )
                             )
                         }
@@ -226,6 +231,8 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
             emptyList()
         }
     }
+
+
 
     override fun getById(id: Int): Libro? {
         val sql = """
@@ -252,7 +259,6 @@ class LibroDAOH2(private val dataSource: DataSource): LibroDAO {
                                 propietario_nombre = propietarioNombre
                             )
                         } else {
-                            // No se encontró el videojuego con el id proporcionado
                             null
                         }
                     }

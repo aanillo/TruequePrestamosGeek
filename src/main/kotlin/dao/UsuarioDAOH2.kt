@@ -98,13 +98,31 @@ class UsuarioDAOH2(private val dataSource: DataSource): UsuarioDAO {
     }
 
 
-    override fun update(usuario: Usuario): Usuario {
-        TODO("Not yet implemented")
-    }
+    override fun getByUsername(username: String): Usuario? {
+        val sql = "SELECT * FROM usuario WHERE nombre = ?"
 
-    override fun delete(id: Int) {
-        TODO("Not yet implemented")
+        return try {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, username)
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            Usuario(
+                                id = rs.getInt("id"),
+                                nombre = rs.getString("nombre"),
+                                email = rs.getString("email"),
+                                password = rs.getString("password")
+                            )
+                        } else {
+                            null
+                        }
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            println("Error al obtener el usuario: ${e.message}")
+            null
+        }
     }
-
 
 }

@@ -195,7 +195,11 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
     }
 
     override fun getAll(): List<Videojuego> {
-        val sql = "SELECT * FROM videojuego"
+        val sql = """
+        SELECT v.id, v.titulo, v.descripcion, v.estado, v.plataforma, v.propietario_id, u.nombre AS propietario_nombre
+        FROM videojuego v
+        JOIN usuario u ON v.propietario_id = u.id
+    """
 
         return try {
             dataSource.connection.use { conn ->
@@ -210,7 +214,8 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
                                     descripcion = rs.getString("descripcion"),
                                     propietario_id = rs.getInt("propietario_id"),
                                     estado = EstadoProducto.valueOf(rs.getString("estado")),
-                                    plataforma = Plataforma.valueOf(rs.getString("plataforma"))
+                                    plataforma = Plataforma.valueOf(rs.getString("plataforma")),
+                                    propietario_nombre = rs.getString("propietario_nombre")
                                 )
                             )
                         }
@@ -223,6 +228,7 @@ class VideojuegoDAOH2(private val dataSource: DataSource) : VideojuegoDAO {
             emptyList()
         }
     }
+
 
 
     override fun getById(id: Int): Videojuego? {
