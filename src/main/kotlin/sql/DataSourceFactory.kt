@@ -52,15 +52,14 @@ object DataSourceFactory {
     }
 
     fun getConnection(): Connection? {
-        // Crear la carpeta ./database si no existe
+
         val databaseFolder = File("./database")
         if (!databaseFolder.exists()) {
-            databaseFolder.mkdirs()  // Crea la carpeta si no existe
+            databaseFolder.mkdirs()
         }
 
         var conexion: Connection? = null
         try {
-            // Aquí mantenemos la URL original (modo servidor) para acceder a la base de datos
             conexion = DriverManager.getConnection(URL, USUARIO, CONTRASEÑA)
         } catch (e: SQLException) {
             e.printStackTrace()
