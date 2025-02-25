@@ -9,10 +9,13 @@ import dao.SolicitudDAOH2
 import dao.UsuarioDAOH2
 import dao.VideojuegoDAOH2
 import entity.*
+import org.h2.tools.Script
 import services.*
 import sql.DataSourceFactory
 import ui.Ui
 import write.WriteProducto
+import java.sql.Connection
+import java.sql.DriverManager
 
 
 private val dataSource = DataSourceFactory.getDS(DataSourceFactory.DataSourceType.HIKARI)
@@ -33,6 +36,7 @@ private val solicitudController = solicitudService?.let { SolicitudController() 
 private val writer = productoService?.let { WriteProducto() }
 
 fun main() {
+
     var usuarioLogueado: Usuario? = null
 
     println("Introduce nombre de usuario:")
